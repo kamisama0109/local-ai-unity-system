@@ -1,74 +1,485 @@
-<<<<<<< HEAD
-# ローカルAIアプリ プロジェクト
+# ローカルAI統合システム - README
 
-## ディレクトリ構成
+## 📋 プロジェクト概要
+
+このプロジェクトは、**複数のAIモデルをDocker環境で動作させ、Unity/WebSocketで統合したハイブリッドAIシステム**です。軽量な会話AI（Phi3）と高性能な生成AI（Qwen）を目的に応じて使い分け、会話履歴管理とWeb検索機能も搭載しています。
+
+### 🎯 主な特徴
+
+- **デュアルAI構成**: Phi3（Intent分類用）と Qwen（実行用）の2段階処理
+- **マイクロサービスアーキテクチャ**: Docker Composeで各サービスを独立管理
+- **会話履歴管理**: ChromaDBを使用した継続的な記憶機能
+- **Web検索機能**: Bing Search APIの統合（オプション）
+- **Unity統合**: WebSocketで双方向通信可能
+- **ローカル実行**: インターネット不要でプライベートに実行可能
+
+---
+
+## 📁 ディレクトリ構成
 
 ```
 local-ai-project/
-├── 01_main/                    # メインシステム
-│   ├── docker-compose.yml      # Docker全体構成
-│   ├── .env                    # 環境変数
-│   ├── fastapi/                # 制御サーバー
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   ├── app/
-│   │   │   ├── main.py         # エントリーポイント
-│   │   │   ├── router.py       # ルーティング判定
-│   │   │   ├── config.py       # 設定管理
-│   │   │   └── models.py       # データモデル定義
-│   │   └── routing_rules.json  # 振り分けルール
-│   ├── phi3/                   # 会話AI（CPU）
+│
+├── 01_main/                          # 🌟 メインシステム（稼働中）
+│   ├── docker-compose.yml            # サービス全体のオーケストレーション
+│   ├── .env                          # 環境変数設定ファイル
+│   │
+│   ├── fastapi/                      # 🔌 制御サーバー（司令塔）
 │   │   ├── Dockerfile
 │   │   ├── requirements.txt
 │   │   └── app/
-│   │       └── main.py
-│   ├── qwen/                   # 生成AI（GPU）
+│   │       ├── main.py               # FastAPI メインアプリケーション
+│   │       ├── router.py             # AI ルーター（Intent分類 + 振り分け）
+│   │       ├── history.py            # 会話履歴管理（ChromaDB連携）
+│   │       ├── web_search_detector.py # Web検索判定ロジック
+│   │       ├── web_search_client.py  # Bing Search API クライアント
+│   │       └── web_log_manager.py    # 検索ログ管理
+│   │
+│   ├── phi3/                         # 🧠 軽量AI（Intent分類専用）
 │   │   ├── Dockerfile
 │   │   ├── requirements.txt
 │   │   └── app/
-│   │       └── main.py
-│   └── unity/                  # Unityプロジェクト（別途管理）
-│       └── README.md
+│   │       └── main.py               # LLM推論エンドポイント
+│   │
+│   ├── qwen/                         # ⚡ 高性能AI（メイン処理用）
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── app/
+│   │       └── main.py               # LLM推論エンドポイント
+│   │
+│   └── unity/                        # 🎮 Unityプロジェクト
+│       ├── LocalAIChat/              # Unity プロジェクトフォルダ
+│       └── Scripts/                  # C# スクリプト
+│           ├── AIManager.cs          # AI通信管理
+│           └── UIManager.cs          # UI制御
 │
-├── 02_logs/                    # ログ・会話履歴
-│   ├── chroma_db/              # ChromaDB永続化データ
-│   ├── conversations/          # 会話ログ（JSON）
-│   └── system/                 # システムログ
+├── 02_logs/                          # 📊 ログ・会話データ
+│   ├── chroma_db/                    # ChromaDB永続化ストレージ（ベクトル＋メタデータ）
+│   ├── conversations/                # 会話ログ（JSON形式）
+│   │   ├── default_user_2026-04-30.jsonl
+│   │   ├── default_user_2026-05-01.jsonl
+│   │   └── ...（ユーザー別・日付別）
+│   └── system/                       # システムログ（エラー・イベント）
 │
-└── 03_models/                  # AIモデル保存場所
-    ├── phi3/                   # Phi3モデルファイル
-    └── qwen/                   # Qwenモデルファイル
+├── 03_models/                        # 🤖 AIモデルファイル保存先
+│   ├── phi3/                         # Phi3 モデル（GGUF形式）
+│   │   └── Phi-3-mini-4k-instruct-q4.gguf
+│   └── qwen/                         # Qwen モデル（GGUF形式）
+│       └── Qwen2.5-Coder-3B-4bit.gguf
+│
+├── backend/                          # 🔧 オプション：バックエンドAPI
+│   ├── app.py                        # メインアプリ
+│   ├── llm_manager.py                # LLM管理モジュール
+│   ├── memory_manager.py             # メモリ管理
+│   ├── requirements.txt
+│   └── tests/                        # テストスイート
+│
+├── docker/                           # 🐳 Docker設定（レガシー）
+├── docs/                             # 📖 ドキュメント
+│   ├── ARCHITECTURE.md               # システム全体設計
+│   ├── COMMUNICATION_FLOW.md         # WebSocket通信仕様
+│   └── SETUP_GUIDE.md                # セットアップ詳細ガイド
+├── memory/                           # 💾 会話メモリ＆抽出器
+├── config.json                       # 全体設定ファイル
+├── docker-compose.yml                # ルートレベルのCompose定義
+└── requirements.txt                  # Pythonパッケージ一覧
 ```
 
-## セットアップ手順
+---
 
-1. `03_models/` にモデルファイルを配置
-2. `01_main/.env` を自分の環境に合わせて編集
-3. `cd 01_main && docker-compose up -d`
-=======
-# Project Overview
+## 🔄 システムアーキテクチャ & 通信フロー
 
-This project aims to create an AI system integrated with Unity, providing engaging and intelligent interactions in gameplay.
+### **全体フロー図**
 
-## Setup Instructions
+```
+┌─────────────┐
+│   Unity     │ (ゲーム/フロントエンド)
+│  クライアント  │
+└──────┬──────┘
+       │ WebSocket/HTTP
+       │ ChatRequest (JSON)
+       ▼
+┌─────────────────────────────┐
+│  FastAPI サーバー            │  ← 司令塔
+│  (ポート: 8000)              │
+│                             │
+│ 1) リクエスト受信            │
+│ 2) Intent分類を指示          │
+│ 3) 実行AIに指示             │
+│ 4) 会話履歴を保存            │
+│ 5) レスポンスを返送          │
+└──────┬──────────────────────┘
+       │
+       ├─ HTTP ──────────────────┐
+       │                         │
+       ▼                         ▼
+┌──────────────┐         ┌──────────────┐
+│   Phi3       │         │    Qwen      │
+│  (ポート:8001) │         │  (ポート:8002) │
+│              │         │              │
+│ 役割:         │         │ 役割:        │
+│ Intent分類   │         │ メイン処理   │
+│ （軽量）      │         │ （高性能）   │
+└──────────────┘         └──────────────┘
+                         │
+                         ├─ HTTP ──────────────┐
+                         │                    │
+                         ▼                    ▼
+                   ┌──────────────┐  ┌────────────────┐
+                   │   ChromaDB    │  │ Bing Search API│
+                   │  会話履歴      │  │  Web検索        │
+                   │  メモリ保存    │  │ （オプション）   │
+                   └──────────────┘  └────────────────┘
+```
 
-1. **Clone the Repository**:  
-   ```bash
-   git clone https://github.com/kamisama0109/local-ai-unity-system.git
-   cd local-ai-unity-system
-   ```  
+### **通信ステップ詳細**
 
-2. **Install Dependencies**:  
-   Make sure to have Unity installed. Check the required version in the repository.
-   
-3. **Open the Project in Unity**:  
-   Launch Unity Hub, click on 'Add', and navigate to the project folder.
+#### **1️⃣ リクエスト段階 (Unity → FastAPI)**
+```json
+{
+  "message": "Pythonで階乗を計算する関数を作って",
+  "user_id": "player_123",
+  "force_model": null,
+  "web_search_confirmed": false
+}
+```
 
-4. **Configure Settings**:  
-   Adjust settings under `Edit > Project Settings` to match your desired specifications.
+#### **2️⃣ Intent分類段階 (FastAPI → Phi3)**
+- FastAPI が Phi3 に「このメッセージのIntentは何か」と尋ねる
+- Phi3 が分類結果を返す：`code`（コード実装）
 
-5. **Run the Project**:  
-   Click the Play button in the Unity editor to start using the AI system.
+#### **3️⃣ 実行段階 (FastAPI → Qwen)**
+- FastAPIが Qwen に「[MODE: CODE] の指示」を付加して送信
+- Qwen が詳細で実用的なコード例を生成
 
-Feel free to contribute and make improvements!
->>>>>>> c295019a0cc828d6f5fb63c42f22af5732252b2e
+#### **4️⃣ 応答段階 (FastAPI → Unity)**
+```json
+{
+  "response": "def factorial(n):\n    return 1 if n <= 1 else n * factorial(n-1)",
+  "model_used": "qwen",
+  "processing_time": 2.34,
+  "web_search_performed": false
+}
+```
+
+---
+
+## 🧠 Intent分類システム
+
+FastAPI のルーターは、ユーザーの入力を **4つのIntentカテゴリ**に自動分類します：
+
+| Intent | 対応モード | 説明 | 例 |
+|--------|---------|------|-----|
+| **chat** | [MODE: CHAT] | 雑談・情報提供 | 「今日の天気は？」 |
+| **code** | [MODE: CODE] | コード実装・例 | 「リスト処理を教えて」 |
+| **fix** | [MODE: FIX] | デバッグ・問題解決 | 「このエラーの修正方法は？」 |
+| **idea** | [MODE: IDEA] | アイデア発想・企画 | 「ゲーム演出のアイデア」 |
+
+**分類プロセス**:
+1. Phi3 に「この入力は chat/code/fix/idea のどれ？」と問い合わせ
+2. 失敗時は fallback ロジック（キーワード検索）で自動判定
+3. 判定結果に応じた専用プロンプトを Qwen に送信
+
+---
+
+## 💬 会話履歴 & メモリ管理
+
+### **ChromaDB統合**
+- 会話ごとに **ユーザーID + 日時** で会話ログを作成
+- ログは JSON Lines形式で `/02_logs/conversations/` に保存
+  ```json
+  {"timestamp": "2026-05-10T14:23:45", "user": "player_123", "message": "こんにちは", "response": "こんにちは！"}
+  ```
+
+### **ベクトル化＆メモリ**
+- ChromaDB が会話をベクトル化し、"意味的な関連性"を学習
+- 過去の会話から関連コンテキストを自動抽出
+- メモリ上限：`config.json` の `memory.max_size` で調整可能（デフォルト1024ユニット）
+
+---
+
+## 🌐 Web検索機能（オプション）
+
+Bing Search API を統合した Web検索機能：
+
+1. **検索判定**: メッセージから「検索が必要か」を自動判定
+2. **ユーザー確認**: 検索実行前に Unity で確認ボタン表示
+3. **検索実行**: 確認後、非同期で Bing API に問い合わせ
+4. **結果統合**: 検索結果を Qwen のプロンプトに埋め込み
+5. **ログ保存**: 検索履歴を `/02_logs/system/web_search.log` に記録
+
+**有効化方法**:
+```bash
+export BING_API_KEY="your-bing-api-key"
+```
+
+---
+
+## 🚀 セットアップ＆実行手順
+
+### **前提条件**
+- Docker / Docker Compose インストール済み
+- モデルファイル（GGUF形式）をダウンロード済み
+
+### **ステップ1: モデルファイルの配置**
+```bash
+# Phi3 モデル
+mkdir -p 03_models/phi3
+# → Phi-3-mini-4k-instruct-q4.gguf を配置
+
+# Qwen モデル
+mkdir -p 03_models/qwen
+# → Qwen2.5-Coder-3B-4bit.gguf を配置
+```
+
+### **ステップ2: 環境変数の設定**
+```bash
+cd 01_main
+cat > .env << EOF
+# FastAPI設定
+FASTAPI_PORT=8000
+API_KEY=your-secret-key-here
+
+# AIモデルURL
+PHI3_URL=http://phi3:8001
+QWEN_URL=http://qwen:8002
+
+# Web検索（オプション）
+BING_API_KEY=your-bing-api-key-here
+
+# ChromaDB
+CHROMA_DATA_DIR=/app/logs/chroma_db
+
+# ログ出力
+LOG_LEVEL=INFO
+EOF
+```
+
+### **ステップ3: Docker サービス起動**
+```bash
+cd 01_main
+docker-compose up -d
+
+# ログ確認
+docker-compose logs -f fastapi
+```
+
+### **ステップ4: 動作確認**
+```bash
+# FastAPI は自動的にポート 8000 で起動
+# http://localhost:8000/docs にアクセス → Swagger UI で API テスト可能
+
+# 例：チャットリクエスト
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "こんにちは",
+    "user_id": "test_user"
+  }'
+```
+
+### **ステップ5: Unity との連携**
+1. Unity Editor で `unity/LocalAIChat/` を開く
+2. `Scripts/AIManager.cs` の WebSocket URL を確認：
+   ```csharp
+   private string wsUrl = "ws://localhost:8000/ws";
+   ```
+3. Play ボタンで起動
+
+---
+
+## 📡 WebSocket 通信仕様
+
+### **接続確立**
+```javascript
+// JavaScriptの例
+const ws = new WebSocket("ws://localhost:8000/ws");
+
+ws.onopen = () => {
+  console.log("接続成功");
+};
+```
+
+### **メッセージ送信**
+```json
+{
+  "type": "chat_message",
+  "data": {
+    "message": "Pythonを教えて",
+    "user_id": "player_1"
+  }
+}
+```
+
+### **メッセージ受信**
+```json
+{
+  "type": "chat_response",
+  "data": {
+    "response": "Pythonは...",
+    "model_used": "qwen",
+    "processing_time": 1.45
+  }
+}
+```
+
+### **接続終了**
+```javascript
+ws.close();
+```
+
+---
+
+## 🔧 主要な設定ファイル
+
+### **config.json**
+```json
+{
+  "server": {
+    "port": 8000,
+    "host": "localhost"
+  },
+  "model": {
+    "name": "default-model",
+    "version": "1.0"
+  },
+  "memory": {
+    "max_size": 1024,
+    "timeout": 300
+  },
+  "websocket": {
+    "url": "ws://localhost:8000/ws",
+    "protocol": "json"
+  }
+}
+```
+
+### **.env ファイル（例）**
+```bash
+# サーバー
+FASTAPI_PORT=8000
+
+# AI モデル
+PHI3_URL=http://phi3:8001
+QWEN_URL=http://qwen:8002
+
+# API キー
+API_KEY=secret-key-12345
+BING_API_KEY=bing-key-67890
+
+# ログレベル
+LOG_LEVEL=INFO
+```
+
+---
+
+## 📊 ログ出力と監視
+
+### **ログの種類と保存先**
+
+| ログタイプ | 保存先 | 内容 |
+|----------|-------|------|
+| **FastAPI** | `/02_logs/system/fastapi.log` | リクエスト/レスポンス、エラー |
+| **会話ログ** | `/02_logs/conversations/` | ユーザーの会話履歴（JSONL） |
+| **検索ログ** | `/02_logs/system/web_search.log` | Web検索履歴・結果 |
+| **システム** | `/02_logs/system/` | イベント・警告・デバッグ情報 |
+
+### **リアルタイム監視**
+```bash
+# FastAPI ログの リアルタイム表示
+docker-compose logs -f fastapi
+
+# 全サービスのログ表示
+docker-compose logs -f
+```
+
+---
+
+## 🐛 トラブルシューティング
+
+### **Q: FastAPI が起動しない**
+- ✅ ポート 8000 が使用中でないか確認
+- ✅ `.env` ファイルが正しく設定されているか確認
+- ✅ `docker-compose logs fastapi` でエラーを確認
+
+### **Q: Phi3/Qwen が応答しない**
+- ✅ モデルファイル（GGUF）が `03_models/` に配置されているか確認
+- ✅ Docker ネットワークで `phi3:8001` / `qwen:8002` に疎通があるか確認
+- ✅ メモリが十分か確認（4GB以上推奨）
+
+### **Q: Unity から接続できない**
+- ✅ WebSocket URL (`AIManager.cs`) が正しいか確認
+- ✅ FastAPI が起動しているか確認
+- ✅ ファイアウォール設定を確認
+
+### **Q: Web検索が動作しない**
+- ✅ `BING_API_KEY` が設定されているか確認
+- ✅ Bing API キーの有効期限を確認
+- ✅ インターネット接続を確認
+
+---
+
+## 📦 依存パッケージ一覧
+
+### **FastAPI サーバー**
+```
+FastAPI==0.115.0          # Webフレームワーク
+Uvicorn==0.30.0           # ASGIサーバー
+httpx==0.27.0             # 非同期HTTP通信
+ChromaDB>=1.0.0           # ベクトルDB
+Pydantic==2.9.0           # データ検証
+Python-dotenv==1.0.1      # 環境変数読み込み
+aiofiles==23.2.1          # 非同期ファイルIO
+```
+
+### **Phi3/Qwen (LLM)**
+```
+transformers              # Hugging Face モデル読み込み
+torch / onnxruntime       # 推論エンジン
+numpy                     # 数値計算
+```
+
+---
+
+## 🎮 Unity 統合例（C#）
+
+```csharp
+// AIManager.cs
+using UnityEngine;
+using WebSocketSharp;
+
+public class AIManager : MonoBehaviour
+{
+    private WebSocket ws;
+    
+    void Start()
+    {
+        ws = new WebSocket("ws://localhost:8000/ws");
+        ws.OnMessage += (sender, e) => Debug.Log(e.Data);
+        ws.Connect();
+    }
+    
+    public void SendMessage(string text)
+    {
+        string json = JsonUtility.ToJson(new { message = text, user_id = "player_1" });
+        ws.Send(json);
+    }
+}
+```
+
+---
+
+## 📝 ライセンス & 貢献
+
+このプロジェクトはオープンソースです。改善提案やバグ報告は随時受け付けています。
+
+---
+
+## 📞 サポート
+
+トラブルや質問がある場合：
+- ドキュメント (`/docs/`) を確認
+- ログファイル (`/02_logs/`) を確認
+- GitHub Issues で報告
+
+**最終更新**: 2026年5月11日
